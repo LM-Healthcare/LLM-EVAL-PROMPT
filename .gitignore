@@ -1,9 +1,6 @@
 # Original MedMCQA data (too large for git)
 MedMCQA/data/
 
-# Copy of split data (too large for git)
-Data_by_subject/
-
 # Research articles (PDFs, not needed in repo)
 Articoli rilevanti/
 
