@@ -140,24 +140,24 @@ def main():
             has_exp = exp is not None and str(exp).strip() != "" and str(exp).lower() != "null"
             subject_has_exp[subj]["with_exp" if has_exp else "without_exp"] += 1
 
-    # --- Write per-subject JSON files ---
-    print("\nWriting per-subject JSON files...")
+    # --- Write per-subject JSONL files ---
+    print("\nWriting per-subject JSONL files...")
     for subj in sorted(VALID_SUBJECTS):
         if subj not in subject_questions:
             print(f"  [SKIP] {subj}: no questions found")
             continue
-        fname = FILE_NAMES[subj] + ".json"
+        fname = FILE_NAMES[subj] + ".jsonl"
         outpath = os.path.join(OUTPUT_DIR, fname)
         # Merge all splits into a single list, adding a "split" field
-        all_qs = []
-        for split_name in ["dev", "test", "train"]:
-            for q in subject_questions[subj].get(split_name, []):
-                q_copy = dict(q)
-                q_copy["split"] = split_name
-                all_qs.append(q_copy)
+        count = 0
         with open(outpath, "w", encoding="utf-8") as f:
-            json.dump(all_qs, f, ensure_ascii=False, indent=2)
-        print(f"  {fname}: {len(all_qs)} questions")
+            for split_name in ["dev", "test", "train"]:
+                for q in subject_questions[subj].get(split_name, []):
+                    q_copy = dict(q)
+                    q_copy["split"] = split_name
+                    f.write(json.dumps(q_copy, ensure_ascii=False) + "\n")
+                    count += 1
+        print(f"  {fname}: {count} questions")
 
     # --- Generate Markdown Report ---
     print("\nGenerating report...")
@@ -210,7 +210,7 @@ def main():
     for subj in sorted(VALID_SUBJECTS):
         idx += 1
         display = DISPLAY_NAMES[subj]
-        fname = FILE_NAMES[subj] + ".json"
+        fname = FILE_NAMES[subj] + ".jsonl"
         dev_c = len(subject_questions[subj].get("dev", []))
         test_c = len(subject_questions[subj].get("test", []))
         train_c = len(subject_questions[subj].get("train", []))
@@ -266,7 +266,7 @@ def main():
     lines.append("│   ├── train.json         (original)")
     lines.append("│   └── by_subject/")
     for subj in sorted(VALID_SUBJECTS):
-        fname = FILE_NAMES[subj] + ".json"
+        fname = FILE_NAMES[subj] + ".jsonl"
         total_c = sum(len(subject_questions[subj].get(s, [])) for s in ["dev", "test", "train"])
         lines.append(f"│       ├── {fname}  ({total_c:,} questions)")
     lines.append("├── split_by_subject.py")

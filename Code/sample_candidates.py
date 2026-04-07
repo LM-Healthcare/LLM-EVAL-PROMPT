@@ -3,7 +3,7 @@ Step 1: Sample candidate questions from the MedMCQA by-subject files.
 
 - Only includes questions from dev and train splits (test has no correct answer).
 - Samples proportionally from each subject with a minimum floor.
-- Outputs a single JSON file with all candidates.
+- Outputs a single JSONL file with all candidates.
 """
 
 import json
@@ -19,9 +19,13 @@ from config import (
 
 
 def load_subject_file(filepath):
-    """Load a per-subject JSON file and filter to dev+train only."""
+    """Load a per-subject JSONL file and filter to dev+train only."""
+    data = []
     with open(filepath, "r", encoding="utf-8") as f:
-        data = json.load(f)
+        for line in f:
+            line = line.strip()
+            if line:
+                data.append(json.loads(line))
     # Keep only dev and train (they have 'cop' = correct option)
     return [q for q in data if q.get("split") in ("dev", "train") and q.get("cop") is not None]
 
@@ -66,7 +70,7 @@ def main():
     random.seed(RANDOM_SEED)
 
     # Discover all subject files
-    subject_files = sorted(BY_SUBJECT_DIR.glob("*.json"))
+    subject_files = sorted(BY_SUBJECT_DIR.glob("*.jsonl"))
     if not subject_files:
         print(f"ERROR: No subject files found in {BY_SUBJECT_DIR}")
         return
@@ -108,10 +112,11 @@ def main():
     # Shuffle the final set
     random.shuffle(sampled)
 
-    # Save
+    # Save as JSONL
     CANDIDATES_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(CANDIDATES_FILE, "w", encoding="utf-8") as f:
-        json.dump(sampled, f, ensure_ascii=False, indent=2)
+        for q in sampled:
+            f.write(json.dumps(q, ensure_ascii=False) + "\n")
 
     print(f"\nSampled {len(sampled)} candidates → {CANDIDATES_FILE}")
 

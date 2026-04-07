@@ -5,8 +5,8 @@ Usage:
     python classify_candidates.py --model model_a
     python classify_candidates.py --model model_b
 
-Reads from: output/sampled_candidates.json
-Writes to:  output/classified_<model_key>.json
+Reads from: output/sampled_candidates.jsonl
+Writes to:  output/classified_<model_key>.jsonl
 
 Each question gets a 'classification' object with:
   - category: one of the 4 macro-categories
@@ -245,17 +245,24 @@ async def run_classification(model_key):
         print("Run sample_candidates.py first.")
         sys.exit(1)
 
+    candidates = []
     with open(CANDIDATES_FILE, "r", encoding="utf-8") as f:
-        candidates = json.load(f)
+        for line in f:
+            line = line.strip()
+            if line:
+                candidates.append(json.loads(line))
     print(f"Loaded {len(candidates)} candidates from {CANDIDATES_FILE}")
 
     # Check for existing progress (resume support)
-    output_file = OUTPUT_DIR / f"classified_{model_key}.json"
+    output_file = OUTPUT_DIR / f"classified_{model_key}.jsonl"
     classified = []
     start_index = 0
     if output_file.exists():
         with open(output_file, "r", encoding="utf-8") as f:
-            classified = json.load(f)
+            for line in f:
+                line = line.strip()
+                if line:
+                    classified.append(json.loads(line))
         start_index = len(classified)
         if start_index >= len(candidates):
             print(f"Already fully classified ({start_index}/{len(candidates)}). Nothing to do.")
@@ -288,9 +295,10 @@ async def run_classification(model_key):
     elapsed = time.time() - t0
     print(f"\nClassification complete in {elapsed:.1f}s")
 
-    # Save
+    # Save as JSONL
     with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(classified, f, ensure_ascii=False, indent=2)
+        for q in classified:
+            f.write(json.dumps(q, ensure_ascii=False) + "\n")
     print(f"Saved → {output_file}")
 
     # Quick stats

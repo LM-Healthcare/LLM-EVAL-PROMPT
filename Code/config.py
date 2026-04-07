@@ -6,6 +6,13 @@ Edit MODEL_CONFIGS to set your model names, providers, and API keys.
 import os
 from pathlib import Path
 
+# Load .env file if present (pip install python-dotenv)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent / ".env")
+except ImportError:
+    pass
+
 # --- Paths ---
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "MedMCQA" / "data"
@@ -14,7 +21,7 @@ OUTPUT_DIR = PROJECT_ROOT / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 # Files produced by the pipeline
-CANDIDATES_FILE = OUTPUT_DIR / "sampled_candidates.json"
+CANDIDATES_FILE = OUTPUT_DIR / "sampled_candidates.jsonl"
 
 # --- Sampling ---
 RANDOM_SEED = 42
@@ -69,7 +76,7 @@ CATEGORY_DESCRIPTIONS = {
 MODEL_CONFIGS = {
     "model_a": {
         "provider": "anthropic",
-        "model_name": "claude-4.6",           # <-- EDIT THIS with exact model name
+        "model_name": "claude-sonnet-4-6",           # <-- EDIT THIS with exact model name
         "api_key_env": "ANTHROPIC_API_KEY",    # reads from environment variable
         "base_url": None,                      # default Anthropic endpoint
     },

@@ -27,11 +27,16 @@ FINAL_TOTAL = FINAL_PER_CATEGORY * len(CATEGORIES)  # 200
 
 
 def load_classified(model_key):
-    path = OUTPUT_DIR / f"classified_{model_key}.json"
+    path = OUTPUT_DIR / f"classified_{model_key}.jsonl"
     if not path.exists():
         raise FileNotFoundError(f"File not found: {path}\nRun classify_candidates.py --model {model_key} first.")
+    data = []
     with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+        for line in f:
+            line = line.strip()
+            if line:
+                data.append(json.loads(line))
+    return data
 
 
 def compute_agreement(data_a, data_b):
@@ -277,7 +282,7 @@ def main():
         s = selection_stats[cat]
         print(f"  {cat}: {s['selected']} selected ({s['from_agreed']} agreed, {s['from_disagreed']} disagreed)")
 
-    # Save final selection as clean JSON (one file per category + one combined)
+    # Save final selection as JSONL (one file per category + one combined)
     final_all = []
     for cat in CATEGORIES:
         cat_questions = []
@@ -291,15 +296,17 @@ def main():
 
         # Per-category file
         cat_fname = cat.lower().replace(" ", "_").replace("&", "and")
-        cat_path = OUTPUT_DIR / f"final_{cat_fname}.json"
+        cat_path = OUTPUT_DIR / f"final_{cat_fname}.jsonl"
         with open(cat_path, "w", encoding="utf-8") as f:
-            json.dump(cat_questions, f, ensure_ascii=False, indent=2)
+            for q in cat_questions:
+                f.write(json.dumps(q, ensure_ascii=False) + "\n")
         print(f"  Saved {len(cat_questions)} → {cat_path.name}")
 
     # Combined file
-    combined_path = OUTPUT_DIR / "final_200_questions.json"
+    combined_path = OUTPUT_DIR / "final_200_questions.jsonl"
     with open(combined_path, "w", encoding="utf-8") as f:
-        json.dump(final_all, f, ensure_ascii=False, indent=2)
+        for q in final_all:
+            f.write(json.dumps(q, ensure_ascii=False) + "\n")
     print(f"\n  Combined → {combined_path.name} ({len(final_all)} questions)")
 
     # Generate report
@@ -310,10 +317,11 @@ def main():
     print(f"  Report  → {report_path.name}")
 
     # Also save full comparison data for auditing
-    audit_path = OUTPUT_DIR / "full_comparison.json"
-    audit_data = [{k: v for k, v in r.items() if k != "_full"} for r in comparison]
+    audit_path = OUTPUT_DIR / "full_comparison.jsonl"
     with open(audit_path, "w", encoding="utf-8") as f:
-        json.dump(audit_data, f, ensure_ascii=False, indent=2)
+        for r in comparison:
+            row = {k: v for k, v in r.items() if k != "_full"}
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
     print(f"  Audit   → {audit_path.name}")
 
 
