@@ -4,6 +4,16 @@ MedMCQA/data/
 # Research articles (PDFs, not needed in repo)
 Articoli rilevanti/
 
+# Copy of split data (too large for git)
+Data_by_subject/
+
+# Pipeline output (large JSON files)
+output/
+
+# API keys
+.env
+Code/.env
+
 # OS / IDE
 .DS_Store
 Thumbs.db
