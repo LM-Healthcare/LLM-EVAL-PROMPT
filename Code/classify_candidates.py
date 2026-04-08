@@ -230,8 +230,16 @@ async def classify_single(client, system_prompt, question, semaphore, index, tot
                     }
 
 
+BATCH_SIZE = 50  # Save progress every N questions
+
+
 async def run_classification(model_key):
-    """Run classification for all candidates using the specified model."""
+    """Run classification for all candidates using the specified model.
+
+    Progress is saved incrementally every BATCH_SIZE questions by appending
+    to the output JSONL file, so the run can be safely resumed after a crash
+    or quota error.
+    """
     if model_key not in MODEL_CONFIGS:
         print(f"ERROR: Unknown model key '{model_key}'. Available: {list(MODEL_CONFIGS.keys())}")
         sys.exit(1)
@@ -255,56 +263,65 @@ async def run_classification(model_key):
 
     # Check for existing progress (resume support)
     output_file = OUTPUT_DIR / f"classified_{model_key}.jsonl"
-    classified = []
-    start_index = 0
+    done_count = 0
     if output_file.exists():
         with open(output_file, "r", encoding="utf-8") as f:
             for line in f:
-                line = line.strip()
-                if line:
-                    classified.append(json.loads(line))
-        start_index = len(classified)
-        if start_index >= len(candidates):
-            print(f"Already fully classified ({start_index}/{len(candidates)}). Nothing to do.")
+                if line.strip():
+                    done_count += 1
+        if done_count >= len(candidates):
+            print(f"Already fully classified ({done_count}/{len(candidates)}). Nothing to do.")
             return
-        print(f"Resuming from question {start_index + 1}/{len(candidates)}")
+        print(f"Resuming from question {done_count + 1}/{len(candidates)} ({done_count} already done)")
 
     # Initialize client
     client = LLMClient(config)
     system_prompt = build_system_prompt()
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
 
-    remaining = candidates[start_index:]
+    remaining = candidates[done_count:]
     total = len(candidates)
 
-    print(f"\nClassifying {len(remaining)} questions...")
+    print(f"\nClassifying {len(remaining)} questions in batches of {BATCH_SIZE}...")
     t0 = time.time()
+    classified_total = done_count
 
-    tasks = [
-        classify_single(client, system_prompt, q, semaphore, start_index + i, total)
-        for i, q in enumerate(remaining)
-    ]
-    results = await asyncio.gather(*tasks)
+    # Process in batches so we can save after each batch
+    for batch_start in range(0, len(remaining), BATCH_SIZE):
+        batch = remaining[batch_start:batch_start + BATCH_SIZE]
+        global_offset = done_count + batch_start
 
-    # Merge classification into question data
-    for q, classification in zip(remaining, results):
-        q_out = dict(q)
-        q_out["classification"] = classification
-        classified.append(q_out)
+        tasks = [
+            classify_single(client, system_prompt, q, semaphore, global_offset + i, total)
+            for i, q in enumerate(batch)
+        ]
+        results = await asyncio.gather(*tasks)
+
+        # Append batch results to file immediately
+        with open(output_file, "a", encoding="utf-8") as f:
+            for q, classification in zip(batch, results):
+                q_out = dict(q)
+                q_out["classification"] = classification
+                f.write(json.dumps(q_out, ensure_ascii=False) + "\n")
+
+        classified_total += len(batch)
+        elapsed = time.time() - t0
+        rate = classified_total - done_count
+        print(f"  [checkpoint] {classified_total}/{total} saved ({rate} done in {elapsed:.1f}s)")
 
     elapsed = time.time() - t0
     print(f"\nClassification complete in {elapsed:.1f}s")
-
-    # Save as JSONL
-    with open(output_file, "w", encoding="utf-8") as f:
-        for q in classified:
-            f.write(json.dumps(q, ensure_ascii=False) + "\n")
     print(f"Saved → {output_file}")
 
-    # Quick stats
+    # Quick stats (read back all results)
     from collections import Counter
-    cat_counts = Counter(q["classification"]["category"] for q in classified)
-    conf_counts = Counter(q["classification"]["confidence"] for q in classified)
+    all_classified = []
+    with open(output_file, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.strip():
+                all_classified.append(json.loads(line))
+    cat_counts = Counter(q["classification"]["category"] for q in all_classified)
+    conf_counts = Counter(q["classification"]["confidence"] for q in all_classified)
     print(f"\nCategory distribution:")
     for cat in CATEGORIES:
         print(f"  {cat}: {cat_counts.get(cat, 0)}")
