@@ -147,7 +147,7 @@ class LLMClient:
     async def _classify_openai(self, system_prompt, user_prompt):
         response = await self._client.chat.completions.create(
             model=self.model_name,
-            max_tokens=256,
+            max_completion_tokens=256,
             temperature=0.0,
             messages=[
                 {"role": "system", "content": system_prompt},
