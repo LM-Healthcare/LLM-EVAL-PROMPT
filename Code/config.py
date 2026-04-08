@@ -82,9 +82,9 @@ MODEL_CONFIGS = {
     },
     "model_b": {
         "provider": "openai_compatible",
-        "model_name": "qwen-3.6",             # <-- EDIT THIS with exact model name
-        "api_key_env": "QWEN_API_KEY",         # reads from environment variable
-        "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",  # <-- EDIT THIS: Qwen API base URL
+        "model_name": "gpt-5.4",
+        "api_key_env": "OPENAI_API_KEY",
+        "base_url": None,                      # default OpenAI endpoint
     },
 }
 
