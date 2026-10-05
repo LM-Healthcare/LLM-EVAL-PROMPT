@@ -337,6 +337,9 @@ more sensitive. The discordance rate is re-estimated from the pilot.
   once in `prompts.jsonl`; every launch writes a manifest with the full config, ITAMed commit,
   prompt-file hash and package version.
 - Runs are resumable and idempotent. The analysis is fully scripted (`prompteval analyze`).
+- Execution is containerised (`Dockerfile`, `docker-compose.yml`): the open model is served by the
+  official vLLM image, whose exact version tag is pinned before the main run and recorded, together
+  with the version reported by the server, in every run manifest.
 
 ### Execution order
 

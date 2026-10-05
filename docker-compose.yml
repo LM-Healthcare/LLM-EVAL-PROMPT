@@ -1,0 +1,62 @@
+# Two services:
+#   vllm        OpenAI-compatible server for Qwen3.5-9B on the GPU (official vLLM image)
+#   prompteval  the evaluation CLI (CPU only), run on demand with `docker compose run`
+#
+# Quick start (Linux host with Docker + NVIDIA Container Toolkit):
+#   cp .env.example .env              # fill in ANTHROPIC_API_KEY, HOST_UID, HOST_GID
+#   docker compose build prompteval
+#   docker compose up -d vllm         # first start downloads the model (~18 GB)
+#   docker compose run --rm prompteval run -c configs/pilot.yaml --model qwen35_9b
+#
+# Native-reasoning arm (needs a longer context):
+#   MAX_MODEL_LEN=20480 docker compose up -d vllm
+
+name: llm-eval-prompt
+
+services:
+  vllm:
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:latest}
+    command:
+      - --model
+      - ${QWEN_MODEL:-Qwen/Qwen3.5-9B}
+      - --max-model-len
+      - "${MAX_MODEL_LEN:-8192}"
+      - --gpu-memory-utilization
+      - "${GPU_MEMORY_UTILIZATION:-0.92}"
+      - --language-model-only
+      - --reasoning-parser
+      - qwen3
+    ports:
+      - "${VLLM_PORT:-8000}:8000"
+    ipc: host
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - ${HF_CACHE:-~/.cache/huggingface}:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 60
+      start_period: 180s
+    restart: unless-stopped
+
+  prompteval:
+    build: .
+    image: llm-eval-prompt:latest
+    profiles: ["cli"]            # not started by `up`; use `docker compose run --rm prompteval ...`
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"   # result files owned by you, not root
+    working_dir: /app
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - QWEN_BASE_URL=http://vllm:8000/v1
+    volumes:
+      - ./:/app

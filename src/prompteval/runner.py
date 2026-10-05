@@ -108,6 +108,25 @@ def _seed_for(cfg: dict, mcfg: dict, run: int) -> int | None:
     return int(cfg["experiment"]["seed"]) * 1000 + run
 
 
+def server_versions(cfg: dict) -> dict:
+    """Best-effort: version reported by OpenAI-compatible servers (vLLM exposes /version)."""
+    import urllib.request
+
+    out = {}
+    for m in cfg["models"]:
+        url = m.get("base_url")
+        if m.get("backend") != "openai_compatible" or not url:
+            continue
+        root = url.rstrip("/")
+        root = root[:-3] if root.endswith("/v1") else root
+        try:
+            with urllib.request.urlopen(root + "/version", timeout=3) as r:
+                out[m["id"]] = json.loads(r.read().decode())
+        except Exception as e:  # server down or no /version endpoint
+            out[m["id"]] = f"unavailable ({type(e).__name__})"
+    return out
+
+
 def write_manifest(cfg: dict, out: Path, items: list[Item], bank: PromptBank) -> None:
     manifest = {
         "written": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
@@ -118,6 +137,7 @@ def write_manifest(cfg: dict, out: Path, items: list[Item], bank: PromptBank) ->
         "dataset_commit": dataset_commit(cfg["dataset"]["path"]),
         "prompt_file_hash": bank.file_hash,
         "prompt_version": bank.version,
+        "server_versions": server_versions(cfg),
         "n_items": len(items),
         "item_codes": [i.code for i in items],
     }

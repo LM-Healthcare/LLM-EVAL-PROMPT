@@ -27,7 +27,7 @@ models:
 
   - id: qwen35_9b_thinking
     backend: openai_compatible
-    base_url: http://localhost:8000/v1
+    base_url: ${QWEN_BASE_URL:-http://localhost:8000/v1}   # Docker sets QWEN_BASE_URL=http://vllm:8000/v1
     model: Qwen/Qwen3.5-9B
     max_tokens: 16000
     # recommended thinking-mode sampling (model card, general tasks)

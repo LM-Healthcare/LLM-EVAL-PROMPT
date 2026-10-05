@@ -7,7 +7,29 @@ it supports the clinician-annotation workflows the study needs.
 
 The study protocol is in **[METHODOLOGY.md](METHODOLOGY.md)**. This README covers how to use the code.
 
-## Install
+## Run with Docker (recommended on the GPU machine)
+
+Requires Docker and the NVIDIA Container Toolkit. Nothing else is installed on the host.
+
+```bash
+cp .env.example .env                    # API keys, HOST_UID/HOST_GID (id -u / id -g), vLLM settings
+docker compose build prompteval         # evaluation client image (CPU)
+docker compose up -d vllm               # Qwen3.5-9B on the GPU; first start downloads the weights
+docker compose logs -f vllm             # wait for "Application startup complete"
+alias pe='docker compose run --rm prompteval'
+pe fetch-dataset --dest data/ITAMed
+docker compose run --rm --entrypoint pytest prompteval
+pe run -c configs/pilot.yaml --model qwen35_9b
+```
+
+- `vllm` uses the official `vllm/vllm-openai` image; the client reaches it at `http://vllm:8000/v1`
+  (`QWEN_BASE_URL`, set by compose). On the host the same configs fall back to `localhost:8000`.
+- The repository is bind-mounted into the client container, so code, configs, prompts, results and
+  annotations live in the repo folder on the host. Rebuild the image only when dependencies change.
+- Native-reasoning arm: restart vLLM with a longer context, `MAX_MODEL_LEN=20480 docker compose up -d vllm`.
+- Stop the GPU server with `docker compose stop vllm`.
+
+## Install without Docker
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
@@ -106,6 +128,7 @@ prompteval analyze -c configs/smoke_mock.yaml
 ## Repository layout
 
 ```
+Dockerfile, docker-compose.yml, .env.example   containerised setup (vLLM server + client)
 configs/        main, pilot, triage, thinking_arm, smoke_mock
 prompts/        prompts.yaml (EN + IT)
 data/splits/    eval_split.json (frozen evaluation set + fine-tuning pool)

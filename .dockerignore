@@ -1,0 +1,8 @@
+# Only pyproject.toml, README.md and src/ are copied into the image;
+# everything else is bind-mounted at run time.
+*
+!pyproject.toml
+!README.md
+!src/
+src/**/__pycache__
+src/**/*.egg-info

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import copy
+import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -94,9 +96,34 @@ def _load_raw(path: Path) -> dict:
     return deep_merge(DEFAULTS, raw)
 
 
+_ENV_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
+
+
+def expand_env(obj):
+    """Replace ${VAR} and ${VAR:-default} in every string of the config.
+
+    Lets the same config run on the host (localhost) and inside Docker
+    (service name), e.g. base_url: ${QWEN_BASE_URL:-http://localhost:8000/v1}.
+    """
+    if isinstance(obj, dict):
+        return {k: expand_env(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [expand_env(v) for v in obj]
+    if isinstance(obj, str):
+        def sub(m):
+            val = os.environ.get(m.group(1))
+            if val is None or val == "":
+                if m.group(2) is None:
+                    raise ValueError(f"Environment variable {m.group(1)} is not set (config value '{obj}')")
+                return m.group(2)
+            return val
+        return _ENV_RE.sub(sub, obj)
+    return obj
+
+
 def load_config(path: str | Path) -> dict:
     path = Path(path)
-    cfg = _load_raw(path)
+    cfg = expand_env(_load_raw(path))
     # the output directory is never inherited from a parent config
     with open(path, encoding="utf-8") as f:
         own = yaml.safe_load(f) or {}
