@@ -81,26 +81,53 @@ def gee_condition_effects(df: pd.DataFrame, reference: str) -> pd.DataFrame:
         if reference not in conds or len(conds) < 2:
             continue
         g = g.assign(correct=g["correct"].astype(int))
+        acc = g.groupby("condition")["correct"].mean()
+
+        def not_estimable(cond, why):
+            rows.append({"model_id": model, "language": lang, "condition": cond,
+                         "reference": reference, "odds_ratio": np.nan, "or_lo": np.nan,
+                         "or_hi": np.nan, "p": np.nan, "estimable": False, "note": why})
+
+        # complete separation (0% or 100% correct) makes the logistic estimate infinite
+        if acc[reference] in (0.0, 1.0):
+            for c in conds:
+                if c != reference:
+                    not_estimable(c, f"reference accuracy {acc[reference]:.0%} (separation)")
+            continue
+        separated = [c for c in conds if c != reference and acc[c] in (0.0, 1.0)]
+        for c in separated:
+            not_estimable(c, f"accuracy {acc[c]:.0%} (separation)")
+        keep = [c for c in conds if c not in separated]
+        if len(keep) < 2:
+            continue
+        sub = g[g["condition"].isin(keep)]
         formula = f"correct ~ C(condition, Treatment(reference='{reference}'))"
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                fit = smf.gee(formula, groups="question_code", data=g,
+                fit = smf.gee(formula, groups="question_code", data=sub,
                               family=sm.families.Binomial(),
                               cov_struct=sm.cov_struct.Exchangeable()).fit()
+                ci = fit.conf_int()
+                bse, pvals = fit.bse, fit.pvalues
         except Exception as e:  # pragma: no cover
-            rows.append({"model_id": model, "language": lang, "error": str(e)})
+            for c in keep:
+                if c != reference:
+                    not_estimable(c, f"fit failed: {e}")
             continue
-        ci = fit.conf_int()
         for term in fit.params.index:
             if term == "Intercept":
                 continue
             cond = term.split("[T.")[-1].rstrip("]")
+            coef, se = fit.params[term], bse[term]
+            if not np.isfinite(se) or se <= 0 or abs(coef) > 10:
+                not_estimable(cond, "unstable estimate (no discordant responses or quasi-separation)")
+                continue
             rows.append({
                 "model_id": model, "language": lang, "condition": cond, "reference": reference,
-                "odds_ratio": float(np.exp(fit.params[term])),
+                "odds_ratio": float(np.exp(coef)),
                 "or_lo": float(np.exp(ci.loc[term, 0])), "or_hi": float(np.exp(ci.loc[term, 1])),
-                "p": float(fit.pvalues[term]),
+                "p": float(pvals[term]), "estimable": True, "note": "",
             })
     return pd.DataFrame(rows)
 
@@ -111,6 +138,11 @@ def gee_interactions(df: pd.DataFrame, reference: str) -> str:
     import statsmodels.formula.api as smf
 
     d = df.assign(correct=df["correct"].astype(int))
+    cell_acc = d.groupby(["model_id", "language", "condition"])["correct"].mean()
+    sep = cell_acc[(cell_acc == 0) | (cell_acc == 1)]
+    if len(sep):
+        return ("Joint GEE not fitted: complete separation (0% or 100% accuracy) in cells\n"
+                + sep.to_string())
     factors = [f"C(condition, Treatment(reference='{reference}'))"]
     if d["model_id"].nunique() > 1:
         factors.append("C(model_id)")

@@ -387,7 +387,11 @@ def write_report(cfg, df, metrics, contrasts, cq, gee, out: Path, has_harm: bool
     if len(gee) and "odds_ratio" in gee:
         lines += ["", "## GEE logistic model (odds ratio vs reference)", "",
                   "| Model | Lang | Cond | OR (95% CI) | p (adj) |", "|---|---|---|---|---|"]
-        for _, r in gee.dropna(subset=["odds_ratio"]).iterrows():
+        for _, r in gee.iterrows():
+            if pd.isna(r.get("odds_ratio")):
+                lines.append(f"| {r['model_id']} | {r['language']} | {r['condition']} | "
+                             f"not estimable: {r.get('note', '')} | – |")
+                continue
             lines.append(f"| {r['model_id']} | {r['language']} | {r['condition']} | "
                          f"{r['odds_ratio']:.2f} ({r['or_lo']:.2f}–{r['or_hi']:.2f}) | "
                          f"{_fmt(r['p'])} ({_fmt(r['p_adj'])}) |")
