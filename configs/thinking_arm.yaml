@@ -1,0 +1,50 @@
+# Secondary arm: native reasoning ON, on C0 and on each model's best condition.
+# Question: does built-in reasoning make prompt engineering redundant?
+# Run after `prompteval select-best -c configs/main.yaml`.
+
+extends: main.yaml
+
+experiment:
+  name: thinking_arm
+
+prompts:
+  conditions: [C0, BEST]
+  best_file: results/main/best_conditions.json
+  best_model_map:                 # thinking variants inherit the best condition of their base model
+    sonnet55_thinking: sonnet55
+    qwen35_9b_thinking: qwen35_9b
+
+models:
+  - id: sonnet55_thinking
+    backend: anthropic
+    model: claude-sonnet-5-5
+    max_tokens: 16000
+    params: {}
+    extra_body:
+      thinking: {type: adaptive, display: summarized}
+      output_config: {effort: high}
+    concurrency: 8
+
+  - id: qwen35_9b_thinking
+    backend: openai_compatible
+    base_url: http://localhost:8000/v1
+    model: Qwen/Qwen3.5-9B
+    max_tokens: 16000
+    # recommended thinking-mode sampling (model card, general tasks)
+    params: {temperature: 1.0, top_p: 0.95, presence_penalty: 1.5}
+    extra_body:
+      top_k: 20
+      chat_template_kwargs: {enable_thinking: true}
+    seed_per_run: true
+    concurrency: 16
+
+analysis:
+  reference_condition: C0
+  # bring in the no-thinking runs of the main experiment for the same two conditions
+  import_responses:
+    - dir: results/main
+      conditions: [C0]
+      best_alias: true
+  model_contrasts:
+    - [sonnet55, sonnet55_thinking]
+    - [qwen35_9b, qwen35_9b_thinking]

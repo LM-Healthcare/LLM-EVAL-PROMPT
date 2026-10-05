@@ -1,0 +1,22 @@
+extends: ../../configs/smoke_mock.yaml
+experiment:
+  name: smoke_thinking
+  output_dir: results/smoke_thinking
+prompts:
+  conditions: [C0, BEST]
+  best_file: results/smoke_mock/best_conditions.json
+  best_model_map: {mock_large_thinking: mock_large}
+models:
+  - id: mock_large_thinking
+    backend: mock
+    model: mock-large-thinking
+    params: {skill: 2.8}
+    seed_per_run: true
+analysis:
+  import_responses:
+    - dir: results/smoke_mock
+      models: [mock_large]
+      conditions: [C0]
+      best_alias: true
+  model_contrasts:
+    - [mock_large, mock_large_thinking]

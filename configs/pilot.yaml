@@ -1,0 +1,18 @@
+# Pilot with the real models: 20 items, 2 runs, all conditions and both languages
+# (320 calls per model). Use it to check API parameters, output format compliance,
+# truncation (max_tokens) and cost before launching the main experiment.
+# Results go to results/pilot and are NOT part of the study.
+
+extends: main.yaml
+
+experiment:
+  name: pilot
+
+dataset:
+  limit: 20
+
+sampling:
+  runs: 2
+
+analysis:
+  bootstrap: 200

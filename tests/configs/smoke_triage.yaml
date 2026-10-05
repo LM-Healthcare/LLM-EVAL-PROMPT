@@ -1,0 +1,14 @@
+extends: ../../configs/smoke_mock.yaml
+experiment:
+  name: smoke_triage
+  output_dir: results/smoke_triage
+prompts:
+  conditions: ["BEST+TRIAGE"]
+  best_file: results/smoke_mock/best_conditions.json
+analysis:
+  reference_condition: BEST
+  import_responses:
+    - dir: results/smoke_mock
+      best_alias: true
+  annotations:
+    urgency_gold: results/smoke_mock/annotations/urgency_final.csv

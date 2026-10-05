@@ -1,0 +1,21 @@
+# Triage experiment: each model's best condition + the TRIAGE add-on
+# (urgency classification and immediate next step), compared with the best
+# condition alone from the main experiment.
+# Run after `prompteval select-best -c configs/main.yaml`.
+
+extends: main.yaml
+
+experiment:
+  name: triage
+
+prompts:
+  conditions: ["BEST+TRIAGE"]
+  best_file: results/main/best_conditions.json
+
+analysis:
+  reference_condition: BEST
+  import_responses:
+    - dir: results/main
+      best_alias: true          # main-experiment runs of the best condition, relabelled BEST
+  annotations:
+    urgency_gold: annotations/urgency_final.csv

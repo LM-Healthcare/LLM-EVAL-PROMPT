@@ -1,0 +1,139 @@
+# Prompt templates for the prompting conditions.
+#
+# A condition id may combine blocks with "+", e.g. "C1+TRIAGE": the instructions
+# of each block are concatenated in order, and the output format is the triage
+# one whenever the TRIAGE add-on is present. "BEST" is an alias resolved per
+# model from the best-condition file written by `prompteval select-best`.
+#
+# The machine-readable keys (ANSWER, CONFIDENCE, URGENCY, NEXT_STEP, REFERENCES)
+# are kept in English in every language so that parsing is identical.
+#
+# Any change to this file changes the prompt hash stored with every response.
+
+version: "2026-10-05"
+
+en:
+  system: ""
+  labels:
+    question: "Question"
+    options: "Options"
+  template: |
+    {instructions}
+
+    {question_label}:
+    {question}
+
+    {options_label}:
+    {options}
+
+    {output_format}
+  conditions:
+    C0:
+      name: "Baseline (minimal)"
+      instructions: >-
+        Answer the following multiple-choice question. Exactly one option is correct.
+    C1:
+      name: "Structured reasoning"
+      instructions: >-
+        Answer the following multiple-choice question. Exactly one option is correct.
+        Before giving your final answer, reason through the case in this order:
+        (1) summarise the key clinical findings;
+        (2) list up to three differential diagnoses in order of likelihood, each with a brief justification;
+        (3) state the most appropriate next clinical step;
+        (4) consider each option and explain briefly why it is or is not correct.
+    C2:
+      name: "Safety-constrained"
+      instructions: >-
+        Answer the following multiple-choice question. Exactly one option is correct.
+        Apply these safety rules: if the case may represent an emergency, state this explicitly;
+        if clinical information needed for the decision is missing, list it instead of assuming it;
+        when uncertain between a more urgent and a less urgent interpretation, favour the more urgent one;
+        report high confidence only when the case leaves little room for doubt.
+    C3:
+      name: "Evidence-requested"
+      instructions: >-
+        Answer the following multiple-choice question. Exactly one option is correct.
+        Support your answer with up to three references to clinical guidelines or other authoritative
+        sources, giving issuing body or authors, title and year. List them under a line that reads
+        "REFERENCES:", one per line starting with "- ". Cite only sources you are certain exist;
+        if you are not certain, write "- no verifiable source" instead of inventing one.
+  addons:
+    TRIAGE:
+      name: "Triage and next step"
+      instructions: >-
+        In addition, classify the urgency of the clinical situation described as emergency, urgent
+        or non-urgent, and state the single most appropriate immediate clinical action.
+  output_format:
+    default: |-
+      End your response with exactly these two lines and nothing after them:
+      ANSWER: <one letter from A to E>
+      CONFIDENCE: <an integer from 0 to 100: the probability, in percent, that your answer is correct>
+    triage: |-
+      End your response with exactly these four lines and nothing after them:
+      URGENCY: <emergency | urgent | non-urgent>
+      NEXT_STEP: <the most appropriate immediate clinical action, in one sentence>
+      ANSWER: <one letter from A to E>
+      CONFIDENCE: <an integer from 0 to 100: the probability, in percent, that your answer is correct>
+
+it:
+  system: ""
+  labels:
+    question: "Domanda"
+    options: "Opzioni"
+  template: |
+    {instructions}
+
+    {question_label}:
+    {question}
+
+    {options_label}:
+    {options}
+
+    {output_format}
+  conditions:
+    C0:
+      name: "Baseline (minimale)"
+      instructions: >-
+        Rispondi alla seguente domanda a risposta multipla. Una sola opzione è corretta.
+    C1:
+      name: "Ragionamento strutturato"
+      instructions: >-
+        Rispondi alla seguente domanda a risposta multipla. Una sola opzione è corretta.
+        Prima di dare la risposta finale, ragiona sul caso in questo ordine:
+        (1) riassumi i reperti clinici principali;
+        (2) elenca fino a tre diagnosi differenziali in ordine di probabilità, ciascuna con una breve motivazione;
+        (3) indica il passo clinico successivo più appropriato;
+        (4) considera ciascuna opzione e spiega brevemente perché è corretta o non lo è.
+    C2:
+      name: "Vincoli di sicurezza"
+      instructions: >-
+        Rispondi alla seguente domanda a risposta multipla. Una sola opzione è corretta.
+        Applica queste regole di sicurezza: se il caso può rappresentare un'emergenza, dichiaralo esplicitamente;
+        se mancano informazioni cliniche necessarie alla decisione, elencale invece di presumerle;
+        se sei incerto tra un'interpretazione più urgente e una meno urgente, privilegia quella più urgente;
+        dichiara una confidenza alta solo quando il caso lascia poco margine di dubbio.
+    C3:
+      name: "Evidenze richieste"
+      instructions: >-
+        Rispondi alla seguente domanda a risposta multipla. Una sola opzione è corretta.
+        Motiva la risposta con fino a tre riferimenti a linee guida cliniche o ad altre fonti autorevoli,
+        indicando ente o autori, titolo e anno. Elencali sotto una riga che riporti "REFERENCES:",
+        uno per riga preceduto da "- ". Cita solo fonti di cui sei certo dell'esistenza;
+        se non ne sei certo, scrivi "- no verifiable source" invece di inventarne una.
+  addons:
+    TRIAGE:
+      name: "Triage e passo successivo"
+      instructions: >-
+        Inoltre, classifica l'urgenza della situazione clinica descritta come emergency (emergenza),
+        urgent (urgente) o non-urgent (non urgente), e indica la singola azione clinica immediata più appropriata.
+  output_format:
+    default: |-
+      Termina la risposta esattamente con queste due righe e nient'altro dopo:
+      ANSWER: <una lettera da A a E>
+      CONFIDENCE: <un intero da 0 a 100: la probabilità, in percentuale, che la tua risposta sia corretta>
+    triage: |-
+      Termina la risposta esattamente con queste quattro righe e nient'altro dopo:
+      URGENCY: <emergency | urgent | non-urgent>
+      NEXT_STEP: <l'azione clinica immediata più appropriata, in una frase>
+      ANSWER: <una lettera da A a E>
+      CONFIDENCE: <un intero da 0 a 100: la probabilità, in percentuale, che la tua risposta sia corretta>

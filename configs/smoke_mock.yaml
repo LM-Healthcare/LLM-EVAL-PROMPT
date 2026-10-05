@@ -1,0 +1,41 @@
+# End-to-end smoke test with simulated models (no API keys, no network).
+#   prompteval run -c configs/smoke_mock.yaml && prompteval analyze -c configs/smoke_mock.yaml
+
+experiment:
+  name: smoke_mock
+  output_dir: results/smoke_mock
+  seed: 42
+
+dataset:
+  path: data/ITAMed
+  languages: [it, en]
+  split_file: data/splits/eval_split.json
+  limit: 60
+
+prompts:
+  file: prompts/prompts.yaml
+  language: en
+  conditions: [C0, C1, C2, C3]
+
+sampling:
+  runs: 5
+
+models:
+  - id: mock_large
+    backend: mock
+    model: mock-large
+    params: {skill: 2.2, parse_error_rate: 0.005}
+    seed_per_run: true
+    concurrency: 8
+  - id: mock_small
+    backend: mock
+    model: mock-small
+    params: {skill: 0.6, parse_error_rate: 0.03}
+    seed_per_run: true
+    concurrency: 8
+
+analysis:
+  bootstrap: 200
+  annotations:
+    distractor_ratings: results/smoke_mock/annotations/distractor_harm_final.csv
+    urgency_gold: results/smoke_mock/annotations/urgency_final.csv
