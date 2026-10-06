@@ -2,7 +2,7 @@
 #
 # The repository is bind-mounted at /app by docker-compose and PYTHONPATH points to /app/src,
 # so code, configs and prompts are always the checked-out version: after `git pull` no rebuild
-# is needed unless pyproject.toml dependencies change.
+# is needed unless pyproject.toml dependencies change
 
 FROM python:3.12-slim
 
