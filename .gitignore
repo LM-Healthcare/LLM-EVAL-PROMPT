@@ -7,4 +7,3 @@ data/ITAMed
 results/
 !results/.gitkeep
 annotations/**/*.xlsx
-ISTRUZIONI_LOCALI.md
