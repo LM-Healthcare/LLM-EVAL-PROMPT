@@ -92,6 +92,12 @@ def main(argv: list[str] | None = None) -> None:
 
     a = ap.parse_args(argv)
 
+    # Native runs (conda/venv) do not get .env from docker compose: load it here.
+    from .envfile import load_env_file
+    env_path, env_loaded = load_env_file(getattr(a, "config", None))
+    if env_loaded:
+        print(f"[prompteval] loaded {', '.join(env_loaded)} from {env_path}", file=sys.stderr)
+
     if a.cmd == "fetch-dataset":
         from .dataset import fetch_dataset
         _print({"dataset": a.dest, "commit": fetch_dataset(a.dest, a.ref)})

@@ -38,7 +38,9 @@ prompteval fetch-dataset --dest data/ITAMed --ref <ITAMed commit>
 ```
 
 API keys are read from environment variables (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or the
-variable named by `api_key_env` in a model entry). The open model is served locally, e.g.
+variable named by `api_key_env` in a model entry). The CLI also loads the repository's `.env`
+file (the same one docker compose uses); variables already set in the shell take precedence.
+The open model is served locally, e.g.
 `vllm serve Qwen/Qwen3.5-9B --max-model-len 16384`.
 
 ## Workflow
