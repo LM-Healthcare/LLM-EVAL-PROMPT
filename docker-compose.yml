@@ -23,6 +23,8 @@ services:
       - "${MAX_MODEL_LEN:-8192}"
       - --gpu-memory-utilization
       - "${GPU_MEMORY_UTILIZATION:-0.92}"
+      - --max-num-seqs
+      - "${MAX_NUM_SEQS:-64}"
       - --language-model-only
       - --reasoning-parser
       - qwen3
