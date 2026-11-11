@@ -140,7 +140,7 @@ with every response, and any edit after the pilot is a protocol deviation.
 | Native reasoning (main experiment) | off: `thinking: {type: between_tools}`, effort `high` | off: `enable_thinking: false` |
 | Sampling | API defaults (see below) | temperature 0.7, top-p 0.8, top-k 20, presence penalty 1.5 (model-card recommendation for non-thinking mode) |
 | Seed | not available | per run: `seed = 42 × 1000 + run` |
-| Max output tokens | 4,096 | 4,096 |
+| Max output tokens | 7500 | 7500 |
 
 **Sampling temperature.** The original plan fixed temperature at 0.7 for all models. This is not
 possible with the current Claude models: on Claude Opus 5.5 and Sonnet 5.5 any non-default
